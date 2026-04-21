@@ -1,6 +1,6 @@
 """
 Min-Max Ant System (MMAS) for TSP
-Improvement over AS: only best ant updates pheromone,
+Improvement over AS:  only best ant updates pheromone,
 and pheromone values are clamped to [tau_min, tau_max].
 """
 
