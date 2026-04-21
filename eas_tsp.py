@@ -1,6 +1,6 @@
 """
 Elitist Ant System (EAS) for Travelling Salesman Problem
-=========================================================
+========================================================= 
 Extension of AS where the best-so-far tour gets extra reinforcement
 by an elitist weight 'e' added on top of normal pheromone updates.
 
