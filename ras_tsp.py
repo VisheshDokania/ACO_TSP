@@ -1,7 +1,7 @@
 """
 Rank-Based Ant System (RAS / ASrank) for Travelling Salesman Problem
 =====================================================================
-Extension of AS where ants are sorted by tour length each iteration.
+Extension of AS where  ants are sorted by tour length each iteration.
 Only the top-w ranked ants AND the best-so-far ant deposit pheromone.
 The deposit amount is weighted by rank — rank 1 deposits most.
 
