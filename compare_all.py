@@ -6,8 +6,7 @@ Runs all three algorithms and produces:
   2. Bar chart comparing best tour, convergence iter, runtime
   3. Printed summary table
 """
-
-import time
+ import time
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
