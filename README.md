@@ -201,4 +201,4 @@ Open `index.html` in any browser — no server or installation needed.
 
 ##  Author
 
-**Vidhi Damani** — Evolutionary Computing Lab, [Your College Name]
+**Vishesh Dokania** — Evolutionary Computing Lab,NMIMS
