@@ -1,6 +1,6 @@
 """
 Side-by-side comparison of AS vs MMAS on the 5-city TSP.
-Measures: best tour length, convergence speed, runtime.
+Measures: best tour length, convergence speed, runtime. 
 """
 
 import time
