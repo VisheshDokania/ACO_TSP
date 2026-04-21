@@ -1,7 +1,7 @@
 """
 Ant System (AS) Algorithm for Travelling Salesman Problem
 ===========================================================
-Distance matrix and initial pheromone from the assignment image:
+Distance matrix and initial  pheromone from the assignment image:
   d = 5x5 matrix (cities 0-4)
   thoinit = all 1s (5x5 matrix)
 """
