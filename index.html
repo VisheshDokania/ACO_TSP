@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ACO — Ant System vs Min-Max Ant System</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --card:     #22263a;
+      --border:   #2e3250;
+      --accent:   #4ade80;
+      --accent2:  #60a5fa;
+      --warn:     #fbbf24;
+      --text:     #e2e8f0;
+      --muted:    #8892a4;
+      --radius:   10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    header h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; }
+    header p  { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      max-width: 1100px;
+      margin: 0 auto 20px;
+    }
+    @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .card h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* Metrics row */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      max-width: 1100px;
+      margin: 0 auto 20px;
+    }
+    @media (max-width: 600px) { .metrics { grid-template-columns: repeat(2,1fr); } }
+    .metric {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+    }
+    .metric .label { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric .value { font-size: 1.5rem; font-weight: 700; }
+    .metric .value.green { color: var(--accent); }
+    .metric .value.blue  { color: var(--accent2); }
+    .metric .value.warn  { color: var(--warn); }
+
+    /* Controls */
+    .controls-wrap {
+      max-width: 1100px;
+      margin: 0 auto 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .controls-wrap h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 14px; }
+    .ctrl-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px 20px;
+    }
+    @media (max-width: 600px) { .ctrl-grid { grid-template-columns: 1fr 1fr; } }
+    .ctrl label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 5px; }
+    .ctrl-row { display: flex; align-items: center; gap: 8px; }
+    .ctrl-row input[type=range] {
+      flex: 1; accent-color: var(--accent);
+      height: 4px; cursor: pointer;
+    }
+    .ctrl-row span { font-size: 0.8rem; font-weight: 600; min-width: 32px; text-align: right; color: var(--text); }
+
+    /* Buttons */
+    .btn-row {
+      display: flex; gap: 10px; flex-wrap: wrap;
+      max-width: 1100px; margin: 0 auto 20px;
+    }
+    button {
+      padding: 9px 20px;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      transition: background 0.15s, transform 0.1s;
+    }
+    button:hover  { background: var(--border); }
+    button:active { transform: scale(0.97); }
+    button.primary { background: var(--accent); color: #0f1117; border-color: var(--accent); }
+    button.primary:hover { background: #22c55e; }
+    button:disabled { opacity: 0.35; cursor: default; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+    .tab {
+      font-size: 0.78rem; padding: 5px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent; color: var(--muted);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .tab:hover  { border-color: var(--accent); color: var(--text); }
+    .tab.active { background: var(--accent); color: #0f1117; border-color: var(--accent); font-weight: 600; }
+
+    canvas { width: 100% !important; border-radius: 6px; }
+
+    /* Compare table */
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th { text-align: left; padding: 8px 10px; color: var(--muted); border-bottom: 1px solid var(--border); font-weight: 500; }
+    td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    .win  { color: var(--accent); font-weight: 600; }
+    .tag  { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+    .tag.as   { background: rgba(96,165,250,0.15); color: var(--accent2); }
+    .tag.mmas { background: rgba(74,222,128,0.15); color: var(--accent); }
+
+    /* Log */
+    .log {
+      max-width: 1100px; margin: 0 auto;
+      background: #0a0c14;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.75rem;
+      color: #6ee7b7;
+      height: 90px;
+      overflow-y: auto;
+    }
+
+    .full-width { max-width: 1100px; margin: 0 auto 20px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Ant Colony Optimization — TSP (5 Cities)</h1>
+  <p>Ant System (AS) vs Min-Max Ant System (MMAS) — Interactive Comparison</p>
+</header>
+
+<!-- Metrics -->
+<div class="metrics">
+  <div class="metric"><div class="label">Iteration</div><div class="value blue" id="m-iter">0</div></div>
+  <div class="metric"><div class="label">MMAS Best Tour</div><div class="value green" id="m-best">—</div></div>
+  <div class="metric"><div class="label">τ max</div><div class="value warn" id="m-tmax">—</div></div>
+  <div class="metric"><div class="label">τ min</div><div class="value" id="m-tmin">—</div></div>
+</div>
+
+<!-- Main panels -->
+<div class="grid-2 full-width">
+  <!-- Left: Visualization -->
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('tour')">Tour</button>
+      <button class="tab" onclick="switchTab('pheromone')">Pheromone</button>
+      <button class="tab" onclick="switchTab('convergence')">Convergence</button>
+    </div>
+    <div id="tab-tour">      <canvas id="tourCanvas"  height="300"></canvas></div>
+    <div id="tab-pheromone" style="display:none"><canvas id="pheroCanvas" height="300"></canvas></div>
+    <div id="tab-convergence" style="display:none"><canvas id="convCanvas"  height="300"></canvas></div>
+  </div>
+
+  <!-- Right: Compare table -->
+  <div class="card">
+    <h2>AS vs MMAS — Comparison</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th><span class="tag as">AS</span></th>
+          <th><span class="tag mmas">MMAS</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Pheromone update</td><td>All ants</td><td class="win">Best ant only</td></tr>
+        <tr><td>Pheromone bounds</td><td>None</td><td class="win">τ_min ≤ τ ≤ τ_max</td></tr>
+        <tr><td>Stagnation risk</td><td>High</td><td class="win">Low</td></tr>
+        <tr><td>Exploration</td><td>Decreases</td><td class="win">Maintained</td></tr>
+        <tr><td>Complexity / iter</td><td>O(m·n²)</td><td>O(m·n²) + clamp</td></tr>
+        <tr>
+          <td>Best tour length</td>
+          <td id="cmp-as-best">Run →</td>
+          <td id="cmp-mm-best">Run →</td>
+        </tr>
+        <tr>
+          <td>Convergence (iter)</td>
+          <td id="cmp-as-conv">—</td>
+          <td id="cmp-mm-conv">—</td>
+        </tr>
+        <tr>
+          <td>Runtime (ms)</td>
+          <td id="cmp-as-time">—</td>
+          <td id="cmp-mm-time">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="controls-wrap full-width">
+  <h2>Parameters</h2>
+  <div class="ctrl-grid">
+    <div class="ctrl"><label>Ants (m)</label>
+      <div class="ctrl-row"><input type="range" id="sl-ants"  min="2" max="10" value="5"   step="1"   oninput="upd(this,'v-ants')">  <span id="v-ants">5</span></div></div>
+    <div class="ctrl"><label>Iterations</label>
+      <div class="ctrl-row"><input type="range" id="sl-iter"  min="10" max="200" value="50" step="10"  oninput="upd(this,'v-iter')">  <span id="v-iter">50</span></div></div>
+    <div class="ctrl"><label>Alpha α — pheromone weight</label>
+      <div class="ctrl-row"><input type="range" id="sl-alpha" min="0.5" max="3" value="1"  step="0.5"  oninput="upd(this,'v-alpha')"><span id="v-alpha">1.0</span></div></div>
+    <div class="ctrl"><label>Beta β — heuristic weight</label>
+      <div class="ctrl-row"><input type="range" id="sl-beta"  min="1" max="5"   value="2"  step="0.5"  oninput="upd(this,'v-beta')"> <span id="v-beta">2.0</span></div></div>
+    <div class="ctrl"><label>Rho ρ — evaporation rate</label>
+      <div class="ctrl-row"><input type="range" id="sl-rho"   min="0.1" max="0.9" value="0.5" step="0.1" oninput="upd(this,'v-rho')"><span id="v-rho">0.5</span></div></div>
+    <div class="ctrl"><label>Animation speed</label>
+      <div class="ctrl-row"><input type="range" id="sl-speed" min="1" max="10"  value="5"  step="1"    oninput="upd(this,'v-speed')"><span id="v-speed">5</span></div></div>
+  </div>
+</div>
+
+<!-- Buttons -->
+<div class="btn-row full-width">
+  <button class="primary" id="btn-run" onclick="runBoth()">▶ Run Both (AS + MMAS)</button>
+  <button id="btn-step" onclick="stepOnce()" disabled>Step →</button>
+  <button onclick="resetAll()">↺ Reset</button>
+</div>
+
+<!-- Log -->
+<div class="log" id="log">Ready — press ▶ Run Both to start.</div>
+
+<script>
+const D = [[0,10,12,11,14],[10,0,13,15,8],[12,13,0,9,14],[11,15,9,0,16],[14,8,14,16,0]];
+const N = 5;
+const LABELS = ['A','B','C','D','E'];
+const POS = [[0.5,0.10],[0.88,0.40],[0.72,0.88],[0.28,0.88],[0.12,0.40]];
+
+let asState=null, mmState=null, running=false, animTimer=null, activeTab='tour';
+
+function upd(el,id){
+  document.getElementById(id).textContent = parseFloat(el.value).toFixed(el.step.includes('.')&&el.step!=='0.1'?1:el.step==='0.1'?1:0);
+}
+function getP(){
+  return {
+    ants:  +document.getElementById('sl-ants').value,
+    iters: +document.getElementById('sl-iter').value,
+    alpha: +document.getElementById('sl-alpha').value,
+    beta:  +document.getElementById('sl-beta').value,
+    rho:   +document.getElementById('sl-rho').value,
+    speed: +document.getElementById('sl-speed').value,
+  };
+}
+function tourLen(t){ return t.reduce((s,c,i)=>s+D[c][t[(i+1)%N]],0); }
+function buildTour(ph,alpha,beta){
+  const eta=D.map(r=>r.map(v=>v===0?0:1/v));
+  const s=Math.floor(Math.random()*N), vis=[s], unvis=new Set([...Array(N).keys()].filter(x=>x!==s));
+  while(unvis.size){
+    const cur=vis[vis.length-1], cands=[...unvis];
+    const w=cands.map(j=>Math.pow(ph[cur][j],alpha)*Math.pow(eta[cur][j],beta));
+    const tot=w.reduce((a,b)=>a+b,0);
+    let r=Math.random()*tot,cum=0,ch=cands[cands.length-1];
+    for(let k=0;k<cands.length;k++){cum+=w[k];if(r<=cum){ch=cands[k];break;}}
+    vis.push(ch); unvis.delete(ch);
+  }
+  return vis;
+}
+function initAS(p){ return {ph:Array.from({length:N},()=>Array(N).fill(1)),best:null,bestLen:Infinity,iter:0,params:p,hist:[]}; }
+function initMM(p){ const tm=1,tmin=0.02; return {ph:Array.from({length:N},()=>Array(N).fill(tm)),best:null,bestLen:Infinity,iter:0,params:p,tmax:tm,tmin,hist:[]}; }
+
+function stepAS(s){
+  const {ants,alpha,beta,rho}=s.params;
+  const tours=Array.from({length:ants},()=>{const t=buildTour(s.ph,alpha,beta);return {t,len:tourLen(t)};});
+  s.ph=s.ph.map((row,i)=>row.map((v,j)=>{
+    let dep=0; tours.forEach(({t,len})=>{for(let k=0;k<N;k++){if((t[k]===i&&t[(k+1)%N]===j)||(t[k]===j&&t[(k+1)%N]===i))dep+=1/len;}});
+    return (1-rho)*v+dep;
+  }));
+  tours.forEach(({t,len})=>{if(len<s.bestLen){s.bestLen=len;s.best=t.slice();}});
+  s.hist.push(s.bestLen); s.iter++;
+}
+function stepMM(s){
+  const {ants,alpha,beta,rho}=s.params;
+  const tours=Array.from({length:ants},()=>{const t=buildTour(s.ph,alpha,beta);return {t,len:tourLen(t)};});
+  const ib=tours.reduce((a,b)=>a.len<b.len?a:b);
+  if(ib.len<s.bestLen){s.bestLen=ib.len;s.best=ib.t.slice();}
+  s.ph=s.ph.map((row,i)=>row.map((v,j)=>{
+    let dep=0; const{t,len}=ib;
+    for(let k=0;k<N;k++){if((t[k]===i&&t[(k+1)%N]===j)||(t[k]===j&&t[(k+1)%N]===i))dep+=1/len;}
+    return Math.max(s.tmin,Math.min(s.tmax,(1-rho)*v+dep));
+  }));
+  s.tmax=1/(rho*s.bestLen); s.tmin=s.tmax/(2*N);
+  s.hist.push(s.bestLen); s.iter++;
+}
+
+function resetAll(){
+  clearInterval(animTimer); running=false; asState=null; mmState=null;
+  ['m-iter','m-best','m-tmax','m-tmin'].forEach(id=>document.getElementById(id).textContent='—');
+  document.getElementById('m-iter').textContent='0';
+  document.getElementById('btn-step').disabled=true;
+  document.getElementById('log').textContent='Ready — press ▶ Run Both to start.';
+  ['tourCanvas','pheroCanvas','convCanvas'].forEach(id=>{
+    const c=document.getElementById(id); if(!c)return;
+    c.getContext('2d').clearRect(0,0,c.width,c.height);
+  });
+  ['cmp-as-best','cmp-mm-best'].forEach(id=>document.getElementById(id).textContent='Run →');
+  ['cmp-as-conv','cmp-mm-conv','cmp-as-time','cmp-mm-time'].forEach(id=>document.getElementById(id).textContent='—');
+}
+
+function switchTab(t){
+  activeTab=t;
+  ['tour','pheromone','convergence'].forEach(id=>{
+    document.getElementById('tab-'+id).style.display=id===t?'':'none';
+  });
+  document.querySelectorAll('.tab').forEach((el,i)=>{
+    el.classList.toggle('active',['tour','pheromone','convergence'][i]===t);
+  });
+  if(mmState) renderAll();
+}
+
+function runBoth(){
+  if(running)return;
+  resetAll();
+  const p=getP();
+  asState=initAS(p); mmState=initMM(p); running=true;
+  document.getElementById('btn-step').disabled=false;
+
+  // Run AS fully (instant)
+  const t0=performance.now();
+  for(let i=0;i<p.iters;i++) stepAS(asState);
+  const asTime=(performance.now()-t0).toFixed(1);
+
+  // Animate MMAS
+  const delay=Math.max(20,200-p.speed*18);
+  const t1=performance.now();
+  animTimer=setInterval(()=>{
+    if(mmState.iter>=p.iters){
+      clearInterval(animTimer); running=false;
+      const mmTime=(performance.now()-t1).toFixed(1);
+      document.getElementById('cmp-as-best').textContent=asState.bestLen;
+      document.getElementById('cmp-mm-best').textContent=mmState.bestLen;
+      document.getElementById('cmp-as-conv').textContent=asState.hist.findIndex(v=>v===asState.bestLen)+1;
+      document.getElementById('cmp-mm-conv').textContent=mmState.hist.findIndex(v=>v===mmState.bestLen)+1;
+      document.getElementById('cmp-as-time').textContent=asTime+'ms';
+      document.getElementById('cmp-mm-time').textContent=mmTime+'ms';
+      addLog(`✓ Done! AS=${asState.bestLen} | MMAS=${mmState.bestLen}`);
+      return;
+    }
+    stepMM(mmState); updateMetrics(); renderAll();
+    addLog(`Iter ${mmState.iter}: MMAS=${mmState.bestLen} | AS=${asState.bestLen}`);
+  },delay);
+}
+
+function stepOnce(){ if(mmState&&mmState.iter<mmState.params.iters){stepMM(mmState);updateMetrics();renderAll();} }
+
+function updateMetrics(){
+  document.getElementById('m-iter').textContent=mmState.iter;
+  document.getElementById('m-best').textContent=mmState.bestLen;
+  document.getElementById('m-tmax').textContent=mmState.tmax.toFixed(3);
+  document.getElementById('m-tmin').textContent=mmState.tmin.toFixed(4);
+}
+function addLog(msg){
+  const el=document.getElementById('log');
+  el.textContent+='\n'+msg; el.scrollTop=el.scrollHeight;
+}
+
+// ── Canvas helpers ─────────────────────────────────────────────
+function px(canvas,idx){
+  canvas.width=canvas.parentElement.offsetWidth||500;
+  const[fx,fy]=POS[idx];
+  return[Math.round(40+fx*(canvas.width-80)),Math.round(30+fy*(canvas.height-60))];
+}
+function setup(id){ const c=document.getElementById(id); c.width=c.parentElement.offsetWidth||500; return c; }
+
+function renderAll(){
+  if(activeTab==='tour') drawTour();
+  else if(activeTab==='pheromone') drawPhero();
+  else drawConv();
+}
+
+function drawTour(){
+  const c=setup('tourCanvas'), ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  // faint all edges
+  for(let i=0;i<N;i++) for(let j=i+1;j<N;j++){
+    const[x1,y1]=px(c,i),[x2,y2]=px(c,j);
+    ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  if(mmState&&mmState.best){
+    const t=mmState.best;
+    ctx.strokeStyle='#4ade80'; ctx.lineWidth=2.5;
+    ctx.beginPath();
+    const[sx,sy]=px(c,t[0]); ctx.moveTo(sx,sy);
+    for(let i=1;i<N;i++){const[x,y]=px(c,t[i]);ctx.lineTo(x,y);}
+    ctx.closePath(); ctx.stroke();
+    // weights
+    for(let i=0;i<N;i++){
+      const a=t[i],b=t[(i+1)%N],[x1,y1]=px(c,a),[x2,y2]=px(c,b);
+      ctx.fillStyle='#6ee7b7'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+      ctx.fillText(D[a][b],(x1+x2)/2,(y1+y2)/2-5);
+    }
+  }
+  POS.forEach((_,i)=>{
+    const[x,y]=px(c,i);
+    const isStart=mmState&&mmState.best&&mmState.best[0]===i;
+    ctx.beginPath(); ctx.arc(x,y,16,0,2*Math.PI);
+    ctx.fillStyle=isStart?'#f97316':'#3b82f6'; ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(LABELS[i],x,y);
+    ctx.fillStyle='#8892a4'; ctx.font='10px sans-serif'; ctx.textBaseline='top';
+    ctx.fillText('City '+i,x,y+20);
+  });
+  ctx.fillStyle='#8892a4'; ctx.font='11px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText('MMAS best tour: '+(mmState&&mmState.bestLen||'—'),10,8);
+}
+
+function drawPhero(){
+  const c=setup('pheroCanvas'), ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  const ph=mmState?mmState.ph:Array.from({length:N},()=>Array(N).fill(1));
+  const tmax=mmState?mmState.tmax:1;
+  for(let i=0;i<N;i++) for(let j=i+1;j<N;j++){
+    const[x1,y1]=px(c,i),[x2,y2]=px(c,j);
+    const str=Math.min(1,ph[i][j]/(tmax||1));
+    ctx.strokeStyle=`rgba(251,191,36,${0.08+str*0.92})`; ctx.lineWidth=1+str*7;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    ctx.fillStyle=`rgba(251,191,36,${0.5+str*0.5})`;
+    ctx.font='9px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(ph[i][j].toFixed(3),(x1+x2)/2,(y1+y2)/2-4);
+  }
+  POS.forEach((_,i)=>{
+    const[x,y]=px(c,i);
+    ctx.beginPath(); ctx.arc(x,y,16,0,2*Math.PI);
+    ctx.fillStyle='#d97706'; ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(LABELS[i],x,y);
+  });
+  ctx.fillStyle='#8892a4'; ctx.font='11px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText('Line thickness = pheromone strength (clamped to [τ_min, τ_max])',10,8);
+}
+
+function drawConv(){
+  const c=setup('convCanvas'), ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  const asH=asState?asState.hist:[], mmH=mmState?mmState.hist:[];
+  if(!asH.length&&!mmH.length)return;
+  const all=[...asH,...mmH], minV=Math.min(...all)*0.98, maxV=Math.max(...all)*1.01;
+  const pad={l:48,r:16,t:20,b:36}, W=c.width-pad.l-pad.r, H=c.height-pad.t-pad.b;
+  const sx=i=>pad.l+i*(W/(Math.max(asH.length,mmH.length,1)-1));
+  const sy=v=>pad.t+H-(v-minV)/(maxV-minV)*H;
+  // grid
+  [0,.25,.5,.75,1].forEach(f=>{
+    const y=pad.t+H*f;
+    ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=0.5;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+W,y); ctx.stroke();
+    ctx.fillStyle='#6b7280'; ctx.font='9px sans-serif'; ctx.textAlign='right';
+    ctx.fillText((maxV-(maxV-minV)*f).toFixed(1),pad.l-4,y+4);
+  });
+  // AS dashed blue
+  if(asH.length>1){
+    ctx.strokeStyle='#60a5fa'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]);
+    ctx.beginPath(); asH.forEach((v,i)=>i?ctx.lineTo(sx(i),sy(v)):ctx.moveTo(sx(i),sy(v))); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  // MMAS solid green
+  if(mmH.length>1){
+    ctx.strokeStyle='#4ade80'; ctx.lineWidth=2;
+    ctx.beginPath(); mmH.forEach((v,i)=>i?ctx.lineTo(sx(i),sy(v)):ctx.moveTo(sx(i),sy(v))); ctx.stroke();
+  }
+  // axes
+  ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(pad.l,pad.t); ctx.lineTo(pad.l,pad.t+H); ctx.lineTo(pad.l+W,pad.t+H); ctx.stroke();
+  ctx.fillStyle='#6b7280'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('Iteration',pad.l+W/2,c.height-4);
+  // legend
+  ctx.strokeStyle='#60a5fa'; ctx.setLineDash([5,3]); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(pad.l,12); ctx.lineTo(pad.l+24,12); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#e2e8f0'; ctx.font='11px sans-serif'; ctx.textAlign='left'; ctx.fillText('Ant System',pad.l+28,16);
+  ctx.strokeStyle='#4ade80'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(pad.l+110,12); ctx.lineTo(pad.l+134,12); ctx.stroke();
+  ctx.fillStyle='#e2e8f0'; ctx.fillText('Min-Max AS',pad.l+138,16);
+}
+</script>
+</body>
+</html>
